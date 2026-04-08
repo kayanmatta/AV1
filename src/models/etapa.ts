@@ -5,19 +5,31 @@ export class Etapa{
     private prazo: string;
     private status: StatusEtapa;
     funcionarios: Array<any>;
+    ordem: number;
 
     constructor(
         nome: string,
         prazo: string,
-        status: StatusEtapa
-        
+        status: StatusEtapa,
+        ordem: number = 0
     ){
         this.nome = nome;
         this.prazo = prazo;
         this.status = status;
         this.funcionarios = [];
+        this.ordem = ordem;
     }
-    iniciar (): void{
+
+    getNome(): string { return this.nome; }
+    getStatus(): StatusEtapa { return this.status; }
+    getOrdem(): number { return this.ordem; }
+    
+    iniciar(etapaAnterior: Etapa | null): void {
+        if (etapaAnterior && etapaAnterior.getStatus() !== StatusEtapa.CONCLUIDA) {
+            console.log("Não é possível iniciar. A etapa anterior '" + etapaAnterior.getNome() + "' ainda não foi concluída.");
+            return;
+        }
+        
         if (this.status === StatusEtapa.PENDENTE) {
             this.status = StatusEtapa.ANDAMENTO;
             console.log("Etapa " + this.nome + " iniciada!");
@@ -51,15 +63,8 @@ export class Etapa{
         console.log("Nome: " + this.nome);
         console.log("Prazo: " + this.prazo);
         console.log("Status: " + this.status);
+        console.log("Ordem: " + this.ordem);
         console.log("Funcionários: " + this.funcionarios.length);
         console.log("---");
-    }
-    
-    salvar(): void{
-        console.log("Etapa salva!");
-    }
-    
-    carregar(nome: string): Etapa | null {
-        return null;
     }
 }

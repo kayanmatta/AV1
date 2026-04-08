@@ -29,13 +29,4 @@ export class Teste{
         console.log("Resultado: " + this.resultado);
         console.log("---");
     }
-
-    salvar(): void{
-        console.log("Teste salvo!");
-    }
-    
-    carregar(tipo: string): Teste | null{
-        return null;
-    }
-    
 }

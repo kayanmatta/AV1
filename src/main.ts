@@ -15,31 +15,55 @@ import { Storage } from './storage/storage';
 import { Autenticacao } from './services/autenticacao';
 import { Relatorio } from './services/relatorio';
 
-// Variaveis
 let storage = new Storage();
 let auth = new Autenticacao();
 
-// Carrega todos os dados salvos no storage
+function temPermissao(nivelNecessario: NivelPermissao): boolean {
+    let usuarioLogado = auth.getUsuarioLogado();
+    if (!usuarioLogado) {
+        console.log("Erro: Você precisa estar logado para realizar esta ação!");
+        return false;
+    }
+    
+    if (usuarioLogado.nivelPermissao === NivelPermissao.ADMINISTRADOR) {
+        return true;
+    }
+    
+    if (usuarioLogado.nivelPermissao !== nivelNecessario) {
+        console.log("Erro: Permissão insuficiente! Necessário: " + nivelNecessario);
+        return false;
+    }
+    
+    return true;
+}
+
+function estaLogado(): boolean {
+    if (!auth.getUsuarioLogado()) {
+        console.log("Erro: Você precisa estar logado para realizar esta ação!");
+        return false;
+    }
+    return true;
+}
+
 let dadosAeronaves = storage.carregarAeronaves();
 let aeronaves: Array<Aeronave> = [];
 
-// Converte dados em objetos Aeronave
 for (let i = 0; i < dadosAeronaves.length; i++) {
     let dado = dadosAeronaves[i];
     let aeronave = new Aeronave(dado.codigo, dado.modelo, dado.tipo, dado.capacidade, dado.alcance);
-    // Restaura pecas
+    
     if (dado.pecas) {
         for (let j = 0; j < dado.pecas.length; j++) {
             let p = dado.pecas[j];
             aeronave.pecas.push(new Peca(p.nome, p.tipo, p.fornecedor, p.status));
         }
     }
-    // Restaura etapas
+    
     if (dado.etapas) {
         for (let j = 0; j < dado.etapas.length; j++) {
             let e = dado.etapas[j];
-            let etapa = new Etapa(e.nome, e.prazo, e.status);
-            // Restaura funcionarios da etapa
+            let ordem = e.ordem || (j + 1);
+            let etapa = new Etapa(e.nome, e.prazo, e.status, ordem);
             if (e.funcionarios) {
                 for (let k = 0; k < e.funcionarios.length; k++) {
                     etapa.funcionarios.push(e.funcionarios[k]);
@@ -48,7 +72,7 @@ for (let i = 0; i < dadosAeronaves.length; i++) {
             aeronave.etapas.push(etapa);
         }
     }
-    // Restaura testes
+    
     if (dado.testes) {
         for (let j = 0; j < dado.testes.length; j++) {
             let t = dado.testes[j];
@@ -61,7 +85,6 @@ for (let i = 0; i < dadosAeronaves.length; i++) {
 let dadosFuncionarios = storage.carregarFuncionarios();
 let funcionarios: Array<Funcionario> = [];
 
-// Converte dados em objetos Funcionario
 for (let i = 0; i < dadosFuncionarios.length; i++) {
     let dado = dadosFuncionarios[i];
     let funcionario = new Funcionario(dado.id, dado.nome, dado.telefone, dado.endereco, dado.usuario, dado.senha, dado.nivelPermissao);
@@ -69,7 +92,6 @@ for (let i = 0; i < dadosFuncionarios.length; i++) {
     auth.cadastrarFuncionario(funcionario);
 }
 
-// Funcao para verificar se codigo da aeronave ja existe
 function codigoExiste(codigo: string): boolean {
     for (let i = 0; i < aeronaves.length; i++) {
         if (aeronaves[i].codigo === codigo) {
@@ -79,7 +101,6 @@ function codigoExiste(codigo: string): boolean {
     return false;
 }
 
-// Funcao para buscar aeronave por codigo
 function buscarAeronave(codigo: string): Aeronave | null {
     for (let i = 0; i < aeronaves.length; i++) {
         if (aeronaves[i].codigo === codigo) {
@@ -95,25 +116,38 @@ console.log("Sistema de Gestao de Producao de Aeronaves\n");
 let rodando = true;
 
 while (rodando) {
+    let usuarioLogado = auth.getUsuarioLogado();
+    if (usuarioLogado) {
+        console.log("[Logado: " + usuarioLogado.nome + " (" + usuarioLogado.nivelPermissao + ")]\n");
+    } else {
+        console.log("[Nenhum usuário logado]\n");
+    }
+    
     console.log("=== MENU PRINCIPAL ===");
     console.log("1. Cadastrar Aeronave");
     console.log("2. Listar Aeronaves");
     console.log("3. Cadastrar Funcionario");
     console.log("4. Login");
-    console.log("5. Adicionar Peca a Aeronave");
-    console.log("6. Adicionar Etapa a Aeronave");
-    console.log("7. Executar Teste em Aeronave");
-    console.log("8. Associar Funcionario a Etapa");
-    console.log("9. Gerar Relatorio de Entrega");
-    console.log("10. Sair");
+    console.log("5. Logout");
+    console.log("6. Adicionar Peca a Aeronave");
+    console.log("7. Adicionar Etapa a Aeronave");
+    console.log("8. Atualizar Status de Peca");
+    console.log("9. Iniciar Etapa");
+    console.log("10. Finalizar Etapa");
+    console.log("11. Associar Funcionario a Etapa");
+    console.log("12. Listar Funcionarios de Etapa");
+    console.log("13. Executar Teste em Aeronave");
+    console.log("14. Gerar Relatorio de Entrega");
+    console.log("15. Sair");
     
     let opcao = readline.question("Escolha uma opcao: ");
     
     if (opcao === "1") {
+        if (!temPermissao(NivelPermissao.ADMINISTRADOR)) continue;
+        
         console.log("\n--- Cadastro de Aeronave ---");
         let codigo = readline.question("Codigo: ");
         
-        // Verifica se codigo ja existe
         if (codigoExiste(codigo)) {
             console.log("Erro: Ja existe uma aeronave com esse codigo!\n");
         } else {
@@ -145,6 +179,10 @@ while (rodando) {
         }
         
     } else if (opcao === "3") {
+        if (auth.temFuncionariosCadastrados() && !temPermissao(NivelPermissao.ADMINISTRADOR)) {
+            continue;
+        }
+        
         console.log("\n--- Cadastro de Funcionario ---");
         let id = readline.question("ID: ");
         let nome = readline.question("Nome: ");
@@ -177,6 +215,12 @@ while (rodando) {
         }
         
     } else if (opcao === "5") {
+        auth.logout();
+        console.log("");
+        
+    } else if (opcao === "6") {
+        if (!temPermissao(NivelPermissao.ENGENHEIRO)) continue;
+        
         console.log("\n--- Adicionar Peca a Aeronave ---");
         let codigoAeronave = readline.question("Codigo da aeronave: ");
         let aeronave = buscarAeronave(codigoAeronave);
@@ -205,7 +249,9 @@ while (rodando) {
             console.log("Aeronave nao encontrada!\n");
         }
         
-    } else if (opcao === "6") {
+    } else if (opcao === "7") {
+        if (!temPermissao(NivelPermissao.ENGENHEIRO)) continue;
+        
         console.log("\n--- Adicionar Etapa a Aeronave ---");
         let codigoAeronave = readline.question("Codigo da aeronave: ");
         let aeronave = buscarAeronave(codigoAeronave);
@@ -213,38 +259,110 @@ while (rodando) {
         if (aeronave) {
             let nome = readline.question("Nome da etapa: ");
             let prazoStr = readline.question("Prazo (dd/mm/aaaa): ");
-            let etapa = new Etapa(nome, prazoStr, StatusEtapa.PENDENTE);
+            let ordem = aeronave.etapas.length + 1;
+            let etapa = new Etapa(nome, prazoStr, StatusEtapa.PENDENTE, ordem);
             aeronave.etapas.push(etapa);
             storage.salvarAeronave(aeronave);
             
-            console.log("Etapa adicionada a aeronave!\n");
-        } else {
-            console.log("Aeronave nao encontrada!\n");
-        }
-        
-    } else if (opcao === "7") {
-        console.log("\n--- Executar Teste em Aeronave ---");
-        let codigoAeronave = readline.question("Codigo da aeronave: ");
-        let aeronave = buscarAeronave(codigoAeronave);
-        
-        if (aeronave) {
-            console.log("Tipos: 1-ELETRICO, 2-HIDRAULICO, 3-AERODINAMICO");
-            let tipoNum = readline.question("Tipo de teste (1, 2 ou 3): ");
-            let tipo = TipoTeste.ELETRICO;
-            if (tipoNum === "2") tipo = TipoTeste.HIDRAULICO;
-            else if (tipoNum === "3") tipo = TipoTeste.AERODINAMICO;
-            
-            let teste = new Teste(tipo, ResultadoTeste.APROVADO);
-            teste.executar();
-            aeronave.testes.push(teste);
-            storage.salvarAeronave(aeronave);
-            
-            console.log("Teste registrado!\n");
+            console.log("Etapa adicionada a aeronave! (Ordem: " + ordem + ")\n");
         } else {
             console.log("Aeronave nao encontrada!\n");
         }
         
     } else if (opcao === "8") {
+        if (!temPermissao(NivelPermissao.OPERADOR)) continue;
+        
+        console.log("\n--- Atualizar Status de Peca ---");
+        let codigoAeronave = readline.question("Codigo da aeronave: ");
+        let aeronave = buscarAeronave(codigoAeronave);
+        
+        if (aeronave) {
+            if (aeronave.pecas.length === 0) {
+                console.log("Esta aeronave nao tem pecas cadastradas!\n");
+            } else {
+                console.log("Pecas disponiveis:");
+                for (let i = 0; i < aeronave.pecas.length; i++) {
+                    console.log((i + 1) + ". " + aeronave.pecas[i].getNome() + " [" + aeronave.pecas[i].getStatus() + "]");
+                }
+                let numPeca = parseInt(readline.question("Numero da peca: ")) - 1;
+                
+                if (numPeca >= 0 && numPeca < aeronave.pecas.length) {
+                    console.log("Novo status: 1-EM_PRODUCAO, 2-EM_TRANSPORTE, 3-PRONTA");
+                    let statusNum = readline.question("Status (1, 2 ou 3): ");
+                    let novoStatus = StatusPeca.EM_PRODUCAO;
+                    if (statusNum === "2") novoStatus = StatusPeca.EM_TRANSPORTE;
+                    else if (statusNum === "3") novoStatus = StatusPeca.PRONTA;
+                    
+                    aeronave.pecas[numPeca].atualizarStatus(novoStatus);
+                    storage.salvarAeronave(aeronave);
+                } else {
+                    console.log("Peca invalida!\n");
+                }
+            }
+        } else {
+            console.log("Aeronave nao encontrada!\n");
+        }
+        
+    } else if (opcao === "9") {
+        if (!temPermissao(NivelPermissao.OPERADOR)) continue;
+        
+        console.log("\n--- Iniciar Etapa ---");
+        let codigoAeronave = readline.question("Codigo da aeronave: ");
+        let aeronave = buscarAeronave(codigoAeronave);
+        
+        if (aeronave) {
+            if (aeronave.etapas.length === 0) {
+                console.log("Esta aeronave nao tem etapas cadastradas!\n");
+            } else {
+                console.log("Etapas disponiveis:");
+                for (let i = 0; i < aeronave.etapas.length; i++) {
+                    console.log((i + 1) + ". " + aeronave.etapas[i].getNome() + " [" + aeronave.etapas[i].getStatus() + "]");
+                }
+                let numEtapa = parseInt(readline.question("Numero da etapa: ")) - 1;
+                
+                if (numEtapa >= 0 && numEtapa < aeronave.etapas.length) {
+                    let etapaAnterior = numEtapa > 0 ? aeronave.etapas[numEtapa - 1] : null;
+                    aeronave.etapas[numEtapa].iniciar(etapaAnterior);
+                    storage.salvarAeronave(aeronave);
+                } else {
+                    console.log("Etapa invalida!\n");
+                }
+            }
+        } else {
+            console.log("Aeronave nao encontrada!\n");
+        }
+        
+    } else if (opcao === "10") {
+        if (!temPermissao(NivelPermissao.OPERADOR)) continue;
+        
+        console.log("\n--- Finalizar Etapa ---");
+        let codigoAeronave = readline.question("Codigo da aeronave: ");
+        let aeronave = buscarAeronave(codigoAeronave);
+        
+        if (aeronave) {
+            if (aeronave.etapas.length === 0) {
+                console.log("Esta aeronave nao tem etapas cadastradas!\n");
+            } else {
+                console.log("Etapas disponiveis:");
+                for (let i = 0; i < aeronave.etapas.length; i++) {
+                    console.log((i + 1) + ". " + aeronave.etapas[i].getNome() + " [" + aeronave.etapas[i].getStatus() + "]");
+                }
+                let numEtapa = parseInt(readline.question("Numero da etapa: ")) - 1;
+                
+                if (numEtapa >= 0 && numEtapa < aeronave.etapas.length) {
+                    aeronave.etapas[numEtapa].finalizar();
+                    storage.salvarAeronave(aeronave);
+                } else {
+                    console.log("Etapa invalida!\n");
+                }
+            }
+        } else {
+            console.log("Aeronave nao encontrada!\n");
+        }
+        
+    } else if (opcao === "11") {
+        if (!temPermissao(NivelPermissao.ENGENHEIRO)) continue;
+        
         console.log("\n--- Associar Funcionario a Etapa ---");
         let codigoAeronave = readline.question("Codigo da aeronave: ");
         let aeronave = buscarAeronave(codigoAeronave);
@@ -255,7 +373,7 @@ while (rodando) {
             } else {
                 console.log("Etapas disponiveis:");
                 for (let i = 0; i < aeronave.etapas.length; i++) {
-                    console.log((i + 1) + ". " + aeronave.etapas[i].nome);
+                    console.log((i + 1) + ". " + aeronave.etapas[i].getNome());
                 }
                 let numEtapa = parseInt(readline.question("Numero da etapa: ")) - 1;
                 
@@ -263,7 +381,6 @@ while (rodando) {
                     let idFuncionario = readline.question("ID do funcionario: ");
                     let funcionario = null;
                     
-                    // Busca funcionario
                     for (let i = 0; i < funcionarios.length; i++) {
                         if (funcionarios[i].id === idFuncionario) {
                             funcionario = funcionarios[i];
@@ -285,7 +402,61 @@ while (rodando) {
             console.log("Aeronave nao encontrada!\n");
         }
         
-    } else if (opcao === "9") {
+    } else if (opcao === "12") {
+        if (!estaLogado()) continue;
+        
+        console.log("\n--- Listar Funcionarios de Etapa ---");
+        let codigoAeronave = readline.question("Codigo da aeronave: ");
+        let aeronave = buscarAeronave(codigoAeronave);
+        
+        if (aeronave) {
+            if (aeronave.etapas.length === 0) {
+                console.log("Esta aeronave nao tem etapas cadastradas!\n");
+            } else {
+                console.log("Etapas disponiveis:");
+                for (let i = 0; i < aeronave.etapas.length; i++) {
+                    console.log((i + 1) + ". " + aeronave.etapas[i].getNome());
+                }
+                let numEtapa = parseInt(readline.question("Numero da etapa: ")) - 1;
+                
+                if (numEtapa >= 0 && numEtapa < aeronave.etapas.length) {
+                    aeronave.etapas[numEtapa].listarFuncionarios();
+                    console.log("");
+                } else {
+                    console.log("Etapa invalida!\n");
+                }
+            }
+        } else {
+            console.log("Aeronave nao encontrada!\n");
+        }
+        
+    } else if (opcao === "13") {
+        if (!temPermissao(NivelPermissao.ENGENHEIRO)) continue;
+        
+        console.log("\n--- Executar Teste em Aeronave ---");
+        let codigoAeronave = readline.question("Codigo da aeronave: ");
+        let aeronave = buscarAeronave(codigoAeronave);
+        
+        if (aeronave) {
+            console.log("Tipos: 1-ELETRICO, 2-HIDRAULICO, 3-AERODINAMICO");
+            let tipoNum = readline.question("Tipo de teste (1, 2 ou 3): ");
+            let tipo = TipoTeste.ELETRICO;
+            if (tipoNum === "2") tipo = TipoTeste.HIDRAULICO;
+            else if (tipoNum === "3") tipo = TipoTeste.AERODINAMICO;
+            
+            let teste = new Teste(tipo, ResultadoTeste.APROVADO);
+            teste.executar();
+            aeronave.testes.push(teste);
+            storage.salvarAeronave(aeronave);
+            
+            console.log("Teste registrado!\n");
+        } else {
+            console.log("Aeronave nao encontrada!\n");
+        }
+        
+    } else if (opcao === "14") {
+        if (!temPermissao(NivelPermissao.ADMINISTRADOR)) continue;
+        
         console.log("\n--- Gerar Relatorio de Entrega ---");
         let codigoAeronave = readline.question("Codigo da aeronave: ");
         let aeronave = buscarAeronave(codigoAeronave);
@@ -302,7 +473,7 @@ while (rodando) {
             console.log("Aeronave nao encontrada!\n");
         }
         
-    } else if (opcao === "10") {
+    } else if (opcao === "15") {
         console.log("Saindo...");
         rodando = false;
         

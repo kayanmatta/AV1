@@ -39,11 +39,4 @@ export class Funcionario {
         console.log("Nível: " + this.nivelPermissao);
         console.log("---");
     }
-    salvar(): void{
-
-    }
-    carregar(id:string): Funcionario | null{
-        return null;
-    }
-
 }

@@ -27,26 +27,30 @@ export class Aeronave {
         this.capacidade = capacidade;
         this.alcance = alcance;
     }
-    // Método pra mostrar os dados
-    detalhes(): void{
+
+    detalhes(): void {
         console.log("=== DETALHES DA AERONAVE ===");
         console.log("Código: " + this.codigo);
         console.log("Modelo: " + this.modelo);
         console.log("Tipo: " + this.tipo);
         console.log("Capacidade: " + this.capacidade + " passageiros");
         console.log("Alcance: " + this.alcance + " km");
-        console.log("Peças: " + this.pecas.length);
-        console.log("Etapas: " + this.etapas.length);
-        console.log("Testes: " + this.testes.length);
+        
+        console.log("\n--- PEÇAS (" + this.pecas.length + ") ---");
+        for (let i = 0; i < this.pecas.length; i++) {
+            this.pecas[i].mostrarDetalhes();
+        }
+        
+        console.log("\n--- ETAPAS (" + this.etapas.length + ") ---");
+        for (let i = 0; i < this.etapas.length; i++) {
+            console.log((i + 1) + ". " + this.etapas[i].getNome() + " [" + this.etapas[i].getStatus() + "]");
+        }
+        
+        console.log("\n--- TESTES (" + this.testes.length + ") ---");
+        for (let i = 0; i < this.testes.length; i++) {
+            this.testes[i].mostrarResultado();
+        }
+        
         console.log("=============================");
-    }
-
-    salvar(): void{
-
-    }
-
-    carregar(codigo: string): Aeronave | null {
-        return null;
-
     }
 }

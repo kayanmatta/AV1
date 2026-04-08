@@ -24,19 +24,14 @@ export class Peca{
         console.log("Status da peça " + this.nome + " atualizado para: " + novoStatus);
     }
     
+    getNome(): string { return this.nome; }
+    getStatus(): StatusPeca { return this.status; }
+    
     mostrarDetalhes(): void{
         console.log("Nome: " + this.nome);
         console.log("Tipo: " + this.tipo);
         console.log("Fornecedor: " + this.fornecedor);
         console.log("Status: " + this.status);
         console.log("---");
-    }
-    
-    salvar(): void{
-        console.log("Peça salva!");
-    }
-    
-    carregar(nome: string): Peca | null{
-        return null;
     }
 }

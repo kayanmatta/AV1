@@ -42,17 +42,19 @@ export class Autenticacao {
             return false;
         }
         
-        // Se for admin, deixa tudo
         if (this.usuarioLogado.nivelPermissao === NivelPermissao.ADMINISTRADOR) {
             return true;
         }
         
-        // Senão verifica se é igual
         return this.usuarioLogado.nivelPermissao === nivelNecessario;
     }
 
     getUsuarioLogado(): Funcionario | null {
         return this.usuarioLogado;
+    }
+
+    temFuncionariosCadastrados(): boolean {
+        return this.funcionariosCadastrados.length > 0;
     }
 
     listarFuncionarios(): void {
